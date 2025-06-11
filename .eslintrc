@@ -27,11 +27,15 @@
         "tabWidth": 2,
         "useTabs": false,
         "trailingComma": "all",
-        "arrowParens": "avoid"
+        "arrowParens": "avoid",
+        "endOfLine": "auto"
       }
     ],
     "import/extensions": "off",
-    "valid-jsdoc": "error",
+    "valid-jsdoc": ["error", {
+      "requireReturnType": false,
+      "requireParamType": false
+    }],
     "react/no-did-update-set-state": "warn",
     "react/sort-comp": "off",
     "react/jsx-uses-react": "error",
@@ -55,7 +59,7 @@
         "devDependencies": true
       }
     ],
-    "max-len": ["warn", 120],
+    "max-len": ["warn", 150],
     "prefer-destructuring": "error",
     "object-curly-newline": "off",
     "function-paren-newline": "off",
@@ -89,6 +93,17 @@
         "args": "after-used",
         "ignoreRestSiblings": true,
         "argsIgnorePattern": "^_"
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "lodash",
+            "message": "Import [module] from lodash/[module] instead"
+          }
+        ]
       }
     ]
   },

@@ -2,10 +2,10 @@
  * This file both exports the documentation of shared props separately, to be reused in places where only single props
  * are documented, as well as grouped in case a whole group is needed.
  */
-import { Args } from '@storybook/react';
+import { StorybookArg, StorybookArgs } from '../../../StorybookArgs';
 
-export const animateNewValues = { table: { category: 'Animation' } };
-export const animationBegin = {
+export const animateNewValues: StorybookArg = { table: { category: 'Animation' } };
+export const animationBegin: StorybookArg = {
   description: 'Specifies when the animation should begin, the unit of this option is ms.',
   type: { name: 'number' },
   defaultValue: 0,
@@ -14,33 +14,25 @@ export const animationBegin = {
     category: 'Animation',
   },
 };
-export const animationDuration = {
-  description: 'Specifies the duration of animation, the unit of this option is ms.',
-  type: { name: 'number' },
-  defaultValue: 1500,
+export const animationDuration: StorybookArg = {
   table: {
-    defaultValue: { summary: '1500' },
     category: 'Animation',
   },
 };
-export const animationEasing = {
-  description: 'The type of easing function.',
-  type: { name: 'ease | ease-in | ease-out | ease-in-out | linear' },
-  defaultValue: 'ease',
+export const animationEasing: StorybookArg = {
   table: {
-    defaultValue: { summary: 'ease' },
     category: 'Animation',
   },
 };
-export const animationId = { table: { category: 'Animation' } };
-export const isAnimationActive = {
+export const animationId: StorybookArg = { table: { category: 'Animation' } };
+export const isAnimationActive: StorybookArg = {
   description: 'If set false, animation of component will be disabled.',
   table: {
     type: { summary: 'boolean' },
     defaultValue: { summary: 'true in CSR, and false in SSR' },
     category: 'Animation',
   },
-  defaultValue: 'true in CSR, and false in SSR',
+  defaultValue: true,
 };
 
 /**
@@ -48,7 +40,7 @@ export const isAnimationActive = {
  * is used. If the group is to be extended, then only single props should be imported by each component that does not
  * use all of them.
  * */
-export const AnimationProps: Args = {
+export const AnimationProps: StorybookArgs = {
   animateNewValues,
   animationBegin,
   animationEasing,

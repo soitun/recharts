@@ -15,6 +15,8 @@ import {
   ComposedChart,
   LabelList,
   Brush,
+  ErrorBar,
+  Rectangle,
 } from '../../../src';
 
 export default {
@@ -56,8 +58,8 @@ export const Simple = {
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey="pv" fill="#8884d8" />
-          <Bar dataKey="uv" fill="#82ca9d" />
+          <Bar dataKey="pv" fill="#8884d8" activeBar={<Rectangle fill="pink" stroke="blue" />} />
+          <Bar dataKey="uv" fill="#82ca9d" activeBar={<Rectangle fill="gold" stroke="purple" />} />
         </BarChart>
       </ResponsiveContainer>
     );
@@ -86,6 +88,39 @@ export const Stacked = {
           <Legend />
           <Bar dataKey="pv" stackId="a" fill="#8884d8" />
           <Bar dataKey="uv" stackId="a" fill="#82ca9d" />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  },
+};
+
+const pvErrorData = pageData.map(d => ({ ...d, pvError: [100, 200] }));
+
+export const StackedWithErrorBar = {
+  render: () => {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          width={500}
+          height={300}
+          data={pvErrorData}
+          margin={{
+            top: 20,
+            right: 30,
+            left: 20,
+            bottom: 5,
+          }}
+          layout="vertical"
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis type="number" />
+          <YAxis dataKey="name" type="category" />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="pv" stackId="a" fill="#8884d8" />
+          <Bar dataKey="uv" stackId="a" fill="#82ca9d">
+            <ErrorBar dataKey="pvError" width={5} stroke="red" direction="x" />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     );
@@ -152,10 +187,11 @@ export const CustomShape = {
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" />
+        <Tooltip />
         <YAxis />
         <Bar dataKey="uv" fill="#8884d8" shape={<TriangleBar />} label={{ position: 'top' }}>
-          {pageData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={colors[index % 20]} />
+          {pageData.map(({ name }, index) => (
+            <Cell key={`cell-${name}`} fill={colors[index % 20]} />
           ))}
         </Bar>
       </BarChart>
@@ -327,8 +363,8 @@ export const WithCustomizedEvent = {
           data={pageData}
         >
           <Bar onClick={(_data, index) => setActiveIndex(index)} dataKey="uv" isAnimationActive={false}>
-            {pageData.map((entry: any, index: number) => (
-              <Cell cursor="pointer" fill={index === activeIndex ? '#82ca9d' : '#8884d8'} key={`cell-${index}`} />
+            {pageData.map(({ name }, index: number) => (
+              <Cell cursor="pointer" fill={index === activeIndex ? '#82ca9d' : '#8884d8'} key={`cell-${name}`} />
             ))}
           </Bar>
         </ComposedChart>
@@ -719,6 +755,84 @@ export const NoPadding = {
           <Legend />
           <CartesianGrid strokeDasharray="3 3" />
           <Bar dataKey="pv" fill="#8884d8" background={{ fill: '#eee' }} />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  },
+};
+
+const dataWithSmallValuesAndZero = [
+  {
+    name: 'Page D',
+    uv: 1397,
+    pv: 0,
+  },
+  {
+    name: 'Page E',
+    uv: 0,
+    pv: 1,
+  },
+  {
+    name: 'Page F',
+    uv: 1520,
+    pv: 1108,
+  },
+  {
+    name: 'Page G',
+    uv: 2,
+    pv: 680,
+  },
+];
+
+export const WithMinPointSize = {
+  render: () => {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          width={500}
+          height={300}
+          data={dataWithSmallValuesAndZero}
+          margin={{
+            top: 5,
+            right: 30,
+            left: 20,
+            bottom: 5,
+          }}
+        >
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <CartesianGrid strokeDasharray="3 3" />
+          <Bar dataKey="pv" fill="purple" minPointSize={value => (value === 0 ? 0 : 2)} stackId="a" />
+          <Bar dataKey="uv" fill="green" minPointSize={value => (value === 0 ? 0 : 2)} stackId="a" />
+          <Bar dataKey="uv" fill="blue" minPointSize={value => (value === 0 ? 0 : 2)} />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  },
+};
+
+export const OneDataPointPercentSize = {
+  render: () => {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          width={500}
+          height={300}
+          data={[[4.5, 10]]}
+          barSize="30%" /* When there's only one data point on a numerical domain, we cannot automatically calculate the bar size */
+          margin={{
+            top: 5,
+            right: 30,
+            left: 20,
+            bottom: 5,
+          }}
+        >
+          <XAxis dataKey={v => v[0]} type="number" domain={[0, 10]} />
+          <YAxis />
+          <Tooltip />
+          <CartesianGrid strokeDasharray="3 3" />
+          <Bar dataKey={v => v[1]} />
         </BarChart>
       </ResponsiveContainer>
     );

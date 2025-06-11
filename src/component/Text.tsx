@@ -1,11 +1,12 @@
 import React, { CSSProperties, SVGProps, useMemo } from 'react';
-import reduceCSSCalc from 'reduce-css-calc';
-import classNames from 'classnames';
-import _ from 'lodash';
+
+import isNil from 'lodash/isNil';
+import clsx from 'clsx';
 import { isNumber, isNumOrStr } from '../util/DataUtils';
 import { Global } from '../util/Global';
 import { filterProps } from '../util/ReactUtils';
 import { getStringSize } from '../util/DOMUtils';
+import { reduceCSSCalc } from '../util/ReduceCSSCalc';
 
 const BREAKING_SPACES = /[ \f\n\r\t\v\u2028\u2029]+/;
 
@@ -24,7 +25,7 @@ type CalculateWordWidthsParam = Pick<Props, 'children' | 'breakAll' | 'style'>;
 const calculateWordWidths = ({ children, breakAll, style }: CalculateWordWidthsParam): CalculatedWordWidths => {
   try {
     let words: string[] = [];
-    if (!_.isNil(children)) {
+    if (!isNil(children)) {
       if (breakAll) {
         words = children.toString().split('');
       } else {
@@ -155,7 +156,7 @@ const calculateWordsByLines = (
 };
 
 const getWordsWithoutCalculate = (children: React.ReactNode): Array<Words> => {
-  const words = !_.isNil(children) ? children.toString().split(BREAKING_SPACES) : [];
+  const words = !isNil(children) ? children.toString().split(BREAKING_SPACES) : [];
   return [{ words }];
 };
 
@@ -188,50 +189,41 @@ const getWordsByLines = ({ width, scaleToFit, children, style, breakAll, maxLine
   return getWordsWithoutCalculate(children);
 };
 
-const textDefaultProps = {
-  x: 0,
-  y: 0,
-  lineHeight: '1em',
-  capHeight: '0.71em', // Magic number from d3
-  scaleToFit: false,
-  textAnchor: 'start',
-  verticalAnchor: 'end', // Maintain compat with existing charts / default SVG behavior
-  fill: '#808080',
-};
+const DEFAULT_FILL = '#808080';
 
-export const Text = (props: Props) => {
+export const Text = ({
+  x: propsX = 0,
+  y: propsY = 0,
+  lineHeight = '1em',
+  // Magic number from d3
+  capHeight = '0.71em',
+  scaleToFit = false,
+  textAnchor = 'start',
+  // Maintain compat with existing charts / default SVG behavior
+  verticalAnchor = 'end',
+  fill = DEFAULT_FILL,
+  ...props
+}: Props) => {
   const wordsByLines: Array<Words> = useMemo(() => {
     return getWordsByLines({
       breakAll: props.breakAll,
       children: props.children,
       maxLines: props.maxLines,
-      scaleToFit: props.scaleToFit,
+      scaleToFit,
       style: props.style,
       width: props.width,
     });
-  }, [props.breakAll, props.children, props.maxLines, props.scaleToFit, props.style, props.width]);
+  }, [props.breakAll, props.children, props.maxLines, scaleToFit, props.style, props.width]);
 
-  const {
-    dx,
-    dy,
-    textAnchor,
-    verticalAnchor,
-    scaleToFit,
-    angle,
-    lineHeight,
-    capHeight,
-    className,
-    breakAll,
-    ...textProps
-  } = props;
+  const { dx, dy, angle, className, breakAll, ...textProps } = props;
 
-  if (!isNumOrStr(textProps.x) || !isNumOrStr(textProps.y)) {
+  if (!isNumOrStr(propsX) || !isNumOrStr(propsY)) {
     return null;
   }
-  const x = (textProps.x as number) + (isNumber(dx as number) ? (dx as number) : 0);
-  const y = (textProps.y as number) + (isNumber(dy as number) ? (dy as number) : 0);
+  const x = (propsX as number) + (isNumber(dx as number) ? (dx as number) : 0);
+  const y = (propsY as number) + (isNumber(dy as number) ? (dy as number) : 0);
 
-  let startDy: number;
+  let startDy: string;
   switch (verticalAnchor) {
     case 'start':
       startDy = reduceCSSCalc(`calc(${capHeight})`);
@@ -262,18 +254,20 @@ export const Text = (props: Props) => {
       {...filterProps(textProps, true)}
       x={x}
       y={y}
-      className={classNames('recharts-text', className)}
+      className={clsx('recharts-text', className)}
       textAnchor={textAnchor}
-      fill={textProps.fill.includes('url') ? textDefaultProps.fill : textProps.fill}
+      fill={fill.includes('url') ? DEFAULT_FILL : fill}
     >
-      {wordsByLines.map((line, index) => (
-        // eslint-disable-next-line react/no-array-index-key
-        <tspan x={x} dy={index === 0 ? startDy : lineHeight} key={index}>
-          {line.words.join(breakAll ? '' : ' ')}
-        </tspan>
-      ))}
+      {wordsByLines.map((line, index) => {
+        const words = line.words.join(breakAll ? '' : ' ');
+        return (
+          // duplicate words will cause duplicate keys
+          // eslint-disable-next-line react/no-array-index-key
+          <tspan x={x} dy={index === 0 ? startDy : lineHeight} key={`${words}-${index}`}>
+            {words}
+          </tspan>
+        );
+      })}
     </text>
   );
 };
-
-Text.defaultProps = textDefaultProps;

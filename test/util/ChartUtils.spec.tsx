@@ -12,12 +12,11 @@ import {
   getValueByDataKey,
   MAX_VALUE_REG,
   MIN_VALUE_REG,
-  offsetSign,
-  parseScale,
   parseSpecifiedDomain,
   getTicksOfAxis,
+  getLegendProps,
 } from '../../src/util/ChartUtils';
-import { DataKey } from '../../src/util/types';
+import { BaseAxisProps, DataKey } from '../../src/util/types';
 
 describe('getTicksForAxis', () => {
   const Y_AXIS_EXAMPLE = {
@@ -66,10 +65,11 @@ describe('getTicksForAxis', () => {
   };
 
   it('Returns null for null', () => {
-    expect(getTicksOfAxis(null)).toBeNull();
+    expect(getTicksOfAxis(null as never)).toBeNull();
   });
 
-  it('Ticks without a valid coordinate are filtered out, such as with a PointScale and an active Brush, filtering the domain.', () => {
+  it(`Ticks without a valid coordinate are filtered out,
+  such as with a PointScale and an active Brush, filtering the domain.`, () => {
     const XAxisWithActiveBrush = {
       scale: scalePoint().domain(['13', '14', '15', '16', '17']).range([5, 866]),
       dataKey: 'name',
@@ -176,7 +176,7 @@ describe('getBandSizeOfAxis', () => {
   });
 
   it('DataUtils.getBandSizeOfAxis({ type: "category", scale }) should return 0 ', () => {
-    const axis = {
+    const axis: BaseAxisProps = {
       type: 'category',
       scale: scaleBand().domain(['0', '1', '2', '3']).range([0, 100]),
     };
@@ -184,20 +184,25 @@ describe('getBandSizeOfAxis', () => {
   });
 
   it('DataUtils.getBandSizeOfAxis({ type: "number", scale }, ticks) should return 0 ', () => {
-    const axis = { type: 'number' };
+    const axis: BaseAxisProps = { type: 'number' };
     const ticks = [{ coordinate: 13 }, { coordinate: 15 }, { coordinate: 20 }];
     expect(getBandSizeOfAxis(axis, ticks)).toBe(2);
   });
 });
 
 describe('parseSpecifiedDomain', () => {
-  const domain = [20, 100];
+  const domain: [number, number] = [20, 100];
   it('DataUtils.parseSpecifiedDomain(1, domain) should return domain ', () => {
     expect(parseSpecifiedDomain(1, domain)).toBe(domain);
   });
 
   it('DataUtils.parseSpecifiedDomain(["auto", "auto"], domain) should return domain ', () => {
     const result = parseSpecifiedDomain(['auto', 'auto'], domain);
+    expect(result).toEqual(domain);
+  });
+
+  it('DataUtils.parseSpecifiedDomain(["7", "8"], domain) should return domain', () => {
+    const result = parseSpecifiedDomain(['7', '8'], domain);
     expect(result).toEqual(domain);
   });
 
@@ -228,63 +233,95 @@ describe('parseSpecifiedDomain', () => {
   });
 });
 
-describe('parseScale', () => {
-  it('of "time" ', () => {
-    const { scale } = parseScale({ scale: 'time' });
-    expect(scale).toBeInstanceOf(Function);
-  });
-
-  it('of [12, 12] should return true', () => {
-    const { scale } = parseScale({ scale: scaleLinear() });
-    expect(scale).toBeInstanceOf(Function);
-  });
-});
-
 describe('getValueByDataKey', () => {
-  const data = { a: 1, b: 2, c: 3 };
+  const data: Record<string, unknown> = {
+    a: 1,
+    b: 2,
+    c: 3,
+    1: 4,
+    u: undefined,
+    n: null,
+    nested: { obj: { children: 7 } },
+    arr: [{ x: 6 }, { y: 5 }],
+    nan: NaN,
+  };
 
-  it('of function', () => {
+  it('should call dataKey if it is a function', () => {
     const fn: DataKey<typeof data> = entry => entry.a;
-
     expect(getValueByDataKey(data, fn)).toBe(1);
+    expect(getValueByDataKey(data, fn, 9)).toBe(1);
   });
 
-  it('returns default value', () => {
+  it('should return data from object root', () => {
+    expect(getValueByDataKey(data, 'a')).toEqual(1);
+    expect(getValueByDataKey(data, 'a', 9)).toEqual(1);
+  });
+
+  it('should return data nested in the object', () => {
+    expect(getValueByDataKey(data, 'nested.obj.children')).toEqual(7);
+    expect(getValueByDataKey(data, 'nested.obj.children', 9)).toEqual(7);
+  });
+
+  it('should return data nested in the object inside array', () => {
+    expect(getValueByDataKey(data, 'arr[1].y')).toEqual(5);
+    expect(getValueByDataKey(data, 'arr[1].y', 9)).toEqual(5);
+  });
+
+  it('should read numeric keys', () => {
+    expect(getValueByDataKey(data, 1)).toEqual(4);
+    expect(getValueByDataKey(data, 1, 9)).toEqual(4);
+    expect(getValueByDataKey(data, '1')).toEqual(4);
+    expect(getValueByDataKey(data, '1', 9)).toEqual(4);
+  });
+
+  it('should return default value if the data object path is not defined', () => {
     expect(getValueByDataKey(data, 'foo', 0)).toBe(0);
+    expect(getValueByDataKey(data, 'foo')).toBe(undefined);
   });
-});
 
-describe('offsetSign', () => {
-  describe('of data', () => {
-    const data = [
-      [
-        [0, 1],
-        [0, 2],
-        [0, -5],
-      ],
-      [
-        [0, -1],
-        [0, 2],
-        [0, -5],
-      ],
-    ];
+  it('should return default value if the data object path exists but contains undefined', () => {
+    expect(getValueByDataKey(data, 'd', 0)).toBe(0);
+    expect(getValueByDataKey(data, 'd')).toBe(undefined);
+  });
 
-    offsetSign(data);
+  it('should return default value if the data object path exists but contains null', () => {
+    expect(getValueByDataKey(data, 'd', 0)).toBe(0);
+    expect(getValueByDataKey(data, 'd')).toBe(undefined);
+  });
 
-    it('should change', () => {
-      expect(data).toEqual([
-        [
-          [0, 1],
-          [0, 2],
-          [0, -5],
-        ],
-        [
-          [0, -1],
-          [2, 4],
-          [-5, -10],
-        ],
-      ]);
-    });
+  it('should return NaN if the data object path exists and contains NaN', () => {
+    expect(getValueByDataKey(data, 'nan', 0)).toBe(NaN);
+    expect(getValueByDataKey(data, 'nan')).toBe(NaN);
+  });
+
+  it('should return defaultValue if dataKey is undefined', () => {
+    /*
+     * The function does not really make sense without the dataKey
+     * and so the type says it's mandatory.
+     *
+     * However! Lots of props have the dataKey as optional, the "strictNullChecks" typescript config is turned off,
+     * and many places do not have null runtime checks.
+     */
+    expect(getValueByDataKey(data, undefined as never, 7)).toEqual(7);
+  });
+
+  it('should return undefined if both dataKey and defaultValue are undefined', () => {
+    expect(getValueByDataKey(data, undefined as never, undefined)).toEqual(undefined);
+  });
+
+  test.each([null, undefined])('should return defaultValue if data object is %s', d => {
+    expect(getValueByDataKey(d, () => 1, 7)).toEqual(7);
+  });
+
+  test.each([
+    NaN,
+    [],
+    {},
+    function anon() {
+      return 8;
+    },
+  ])('should return result of function getter if data object is %s', d => {
+    expect(getValueByDataKey(d, () => 1, 7)).toEqual(1);
   });
 });
 
@@ -580,5 +617,73 @@ describe('getDomainOfErrorBars', () => {
     it('should return maximum domain of error bars', () => {
       expect(getDomainOfErrorBars(data, line, 'y', 'horizontal', 'yAxis')).toEqual([85, 220]);
     });
+  });
+
+  describe('with null-entries in data array', () => {
+    const scatter = (
+      <Scatter>
+        <ErrorBar dataKey="error" direction="y" />
+        <ErrorBar dataKey="error2" direction="x" />
+      </Scatter>
+    );
+
+    it('should ignore null values for domain with direction y in yAxis domain', () => {
+      const valueNull = {
+        x: 3,
+        y: null,
+        error: 30,
+        error2: 15,
+      };
+      expect(getDomainOfErrorBars([...data, valueNull], scatter, 'y', undefined, 'yAxis')).toEqual([90, 220]);
+
+      const valueAndErrorNull = {
+        x: 3,
+        y: null,
+        error: null,
+        error2: null,
+      };
+      expect(getDomainOfErrorBars([...data, valueAndErrorNull], scatter, 'y', undefined, 'yAxis')).toEqual([90, 220]);
+
+      const errorNull = {
+        x: 3,
+        y: 300,
+        error: null,
+        error2: null,
+      };
+      expect(getDomainOfErrorBars([...data, errorNull], scatter, 'y', undefined, 'yAxis')).toEqual([90, 300]);
+    });
+
+    it('should ignore null values for domain with direction x in xAxis domain', () => {
+      const valueNull = {
+        x: null,
+        y: 300,
+        error: 30,
+        error2: 15,
+      };
+
+      expect(getDomainOfErrorBars([...data, valueNull], scatter, 'x', undefined, 'xAxis')).toEqual([-14, 17]);
+
+      const valueAndErrorNull = {
+        x: null,
+        y: 300,
+        error: 30,
+        error2: null,
+      };
+      expect(getDomainOfErrorBars([...data, valueAndErrorNull], scatter, 'x', undefined, 'xAxis')).toEqual([-14, 17]);
+
+      const errorNull = {
+        x: 3,
+        y: 300,
+        error: 30,
+        error2: null,
+      };
+      expect(getDomainOfErrorBars([...data, errorNull], scatter, 'x', undefined, 'xAxis')).toEqual([-14, 17]);
+    });
+  });
+});
+
+describe('exports for backwards-compatibility', () => {
+  test('getLegendProps should be exported', () => {
+    expect(getLegendProps).toBeInstanceOf(Function);
   });
 });
